@@ -124,9 +124,9 @@ def affine_norm_relu_forward(x, w, b, gamma, beta, bn_params, normalization, dro
     bn_cache, dropout_cache = None, None
  
     if normalization == 'batchnorm':
-        out, bn_cache = batchnorm_forward(out, gamma, beta, bn_param)
+        out, bn_cache = batchnorm_forward(out, gamma, beta, bn_params)
     elif normalization == 'layernorm':
-        out, bn_cache = layernorm_forward(out, gamma, beta, bn_param)
+        out, bn_cache = layernorm_forward(out, gamma, beta, bn_params)
 
     out, relu_cache = relu_forward(out)
     if dropout:
@@ -136,17 +136,16 @@ def affine_norm_relu_forward(x, w, b, gamma, beta, bn_params, normalization, dro
 
 def affine_norm_relu_backward(dout, cache, normalization, dropout):
     fc_cache, bn_cache, relu_cache, dropout_cache = cache
-    bn_cache, dropout_cache = None, None
 
     if dropout:
-        dout = dropout_backward(out, dropout_cache)
+        dout = dropout_backward(dout, dropout_cache)
 
     dout = relu_backward(dout, relu_cache)
 
     if normalization == 'batchnorm':
         dout, dgamma, dbeta = batchnorm_backward(dout, bn_cache)
     elif normalization == 'layernorm':
-        dout, dgamma, dbeta = layernorm_forward(dout, bn_cache)
+        dout, dgamma, dbeta = layernorm_backward(dout, bn_cache)
 
     dx, dw, db = affine_backward(dout, fc_cache)    
 
