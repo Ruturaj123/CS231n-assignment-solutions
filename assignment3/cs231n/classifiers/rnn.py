@@ -140,7 +140,34 @@ class CaptioningRNN(object):
         # Note also that you are allowed to make use of functions from layers.py   #
         # in your implementation, if needed.                                       #
         ############################################################################
-        pass
+        # Forward Pass
+        h0 = np.dot(features, W_proj) + b_proj
+        x, cache_embed = word_embedding_forward(captions_in, W_embed)
+        if self.cell_type == 'rnn':
+          h, cache_rnn = rnn_forward(x, h0, Wx, Wh, b)
+        else:
+          h, cache_lstm = lstm_forward(x, h0, Wx, Wh, b)
+        
+        scores, cache_scores = temporal_affine_forward(h, W_vocab, b_vocab)
+        loss, dscores = temporal_softmax_loss(scores, captions_out, mask, verbose=False)
+
+        # Backward Pass
+        dh, dW_vocab, db_vocab = temporal_affine_backward(dscores, cache_scores)
+        if self.cell_type == 'rnn':
+          dx, dh0, dWx, dWh, db = rnn_backward(dh, cache_rnn)
+        else:
+          dx, dh0, dWx, dWh, db = lstm_backward(dh, cache_lstm)
+        dW_embed = word_embedding_backward(dx, cache_embed)
+        dW_proj = np.dot(features.T, dh0)
+        db_proj = np.sum(dh0, axis=0)
+        grads['W_proj'] = dW_proj
+        grads['b_proj'] = db_proj
+        grads['W_embed'] = dW_embed
+        grads['Wx'] = dWx
+        grads['Wh'] = dWh
+        grads['b'] = db
+        grads['W_vocab'] = dW_vocab
+        grads['b_vocab'] = db_vocab
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -205,7 +232,23 @@ class CaptioningRNN(object):
         # NOTE: we are still working over minibatches in this function. Also if   #
         # you are using an LSTM, initialize the first cell state to zeros.        #
         ###########################################################################
-        pass
+        h0 = np.dot(features, W_proj) + b_proj
+        prev_c = np.zeros(h0.shape)
+        W = W_embed.shape[1]
+        x = np.ones((N, W)) * W_embed[self._start]
+
+        for i in range(max_length):
+          if self.cell_type == 'rnn':
+            next_h, _ = rnn_step_forward(x, h0, Wx, Wh, b)
+          else:
+            next_h, next_c, _ = lstm_dtep_forward(x, h0, prev_c, Wx, Wh, b)
+            prev_c = next_c
+
+          scores = next_h.dot(W_vocab) + b_vocab
+          max_score_idx = scores.argmax(axis=1)
+          x = W_embed[max_score_idx]
+          h0 = next_h 
+          captions[:, i] = max_score_idx
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
