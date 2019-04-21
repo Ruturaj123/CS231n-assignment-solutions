@@ -241,7 +241,7 @@ class CaptioningRNN(object):
           if self.cell_type == 'rnn':
             next_h, _ = rnn_step_forward(x, h0, Wx, Wh, b)
           else:
-            next_h, next_c, _ = lstm_dtep_forward(x, h0, prev_c, Wx, Wh, b)
+            next_h, next_c, _ = lstm_step_forward(x, h0, prev_c, Wx, Wh, b)
             prev_c = next_c
 
           scores = next_h.dot(W_vocab) + b_vocab
